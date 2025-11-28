@@ -1,265 +1,206 @@
-import 'package:easy_audience_network/easy_audience_network.dart';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:easy_audience_network/easy_audience_network.dart';
 
-void main() => runApp(AdExampleApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyAudienceNetwork.init(
+    testMode: true, // Always true for example app
+  );
+  runApp(const MyApp());
+}
 
-class AdExampleApp extends StatelessWidget {
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Audience Network Example',
+      title: 'Easy Audience Network Demo',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        buttonTheme: ButtonThemeData(
-          textTheme: ButtonTextTheme.primary,
-          buttonColor: Colors.blue,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Audience Network Example',
-          ),
-        ),
-        body: AdsPage(),
-      ),
+      home: const HomePage(),
     );
   }
 }
 
-class AdsPage extends StatefulWidget {
-  final String idfa;
-
-  const AdsPage({Key? key, this.idfa = ''}) : super(key: key);
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
   @override
-  AdsPageState createState() => AdsPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class AdsPageState extends State<AdsPage> {
-  bool _isInterstitialAdLoaded = false;
-  bool _isRewardedAdLoaded = false;
+class _HomePageState extends State<HomePage> {
+  String _status = 'Idle';
   InterstitialAd? _interstitialAd;
   RewardedAd? _rewardedAd;
 
-  /// All widget ads are stored in this variable. When a button is pressed, its
-  /// respective ad widget is set to this variable and the view is rebuilt using
-  /// setState().
-  Widget _currentAd = SizedBox(
-    width: 0.0,
-    height: 0.0,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-
-    // testingId is useful when you want to test if your implementation works in production
-    // without getting real ads, I believe it does not work properly on iOS,
-    // if you want to get your testingId, don't set any testingId and don't set testMode
-    EasyAudienceNetwork.init(
-      testingId: "b602d594afd2b0b327e07a06f36ca6a7e42546d0",
-      testMode: true,
-      iOSAdvertiserTrackingEnabled: true,
-    ).then((_) {
-      _loadInterstitialAd();
-      _loadRewardedVideoAd();
+  void _updateStatus(String status) {
+    setState(() {
+      _status = status;
     });
+    log(status);
   }
 
-  void _loadInterstitialAd() {
-    final interstitialAd = InterstitialAd(InterstitialAd.testPlacementId);
-    interstitialAd.listener = InterstitialAdListener(
+  void _loadInterstitial() {
+    _updateStatus('Loading Interstitial...');
+    _interstitialAd = InterstitialAd(InterstitialAd.testPlacementId);
+    _interstitialAd!.listener = InterstitialAdListener(
       onLoaded: () {
-        _isInterstitialAdLoaded = true;
-        print('interstitial ad loaded');
-      },
-      onError: (code, message) {
-        print('interstitial ad error\ncode = $code\nmessage = $message');
+        _updateStatus('Interstitial Loaded');
       },
       onDismissed: () {
-        // load next ad already
-        interstitialAd.destroy();
-        _isInterstitialAdLoaded = false;
-        _loadInterstitialAd();
-      },
-    );
-    interstitialAd.load();
-    _interstitialAd = interstitialAd;
-  }
-
-  void _loadRewardedVideoAd() {
-    final rewardedAd = RewardedAd(RewardedAd.testPlacementId);
-    rewardedAd.listener = RewardedAdListener(
-      onLoaded: () {
-        _isRewardedAdLoaded = true;
-        print('rewarded ad loaded');
+        _updateStatus('Interstitial Dismissed');
+        _interstitialAd!.destroy();
+        _interstitialAd = null;
       },
       onError: (code, message) {
-        print('rewarded ad error\ncode = $code\nmessage = $message');
-      },
-      onVideoClosed: () {
-        // load next ad already
-        rewardedAd.destroy();
-        _isRewardedAdLoaded = false;
-        _loadRewardedVideoAd();
+        _updateStatus('Interstitial Error: $code - $message');
       },
     );
-    rewardedAd.load();
-    _rewardedAd = rewardedAd;
+    _interstitialAd!.load();
+  }
+
+  void _showInterstitial() {
+    if (_interstitialAd != null) {
+      _interstitialAd!.show();
+    } else {
+      _updateStatus('Interstitial not loaded');
+    }
+  }
+
+  void _loadRewarded() {
+    _updateStatus('Loading Rewarded...');
+    _rewardedAd = RewardedAd(RewardedAd.testPlacementId, userId: "test_user");
+    _rewardedAd!.listener = RewardedAdListener(
+      onLoaded: () {
+        _updateStatus('Rewarded Loaded');
+      },
+      onVideoComplete: () {
+        _updateStatus('Rewarded Video Completed - Grant Reward!');
+      },
+      onVideoClosed: () {
+        _updateStatus('Rewarded Closed');
+        _rewardedAd!.destroy();
+        _rewardedAd = null;
+      },
+      onError: (code, message) {
+        _updateStatus('Rewarded Error: $code - $message');
+      },
+    );
+    _rewardedAd!.load();
+  }
+
+  void _showRewarded() {
+    if (_rewardedAd != null) {
+      _rewardedAd!.show();
+    } else {
+      _updateStatus('Rewarded not loaded');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Flexible(
-          child: Align(
-            alignment: Alignment(0, -1.0),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: _getAllButtons(),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Easy Audience Network'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.grey[200],
+              child: Text('Status: $_status', textAlign: TextAlign.center),
             ),
-          ),
-          fit: FlexFit.tight,
-          flex: 2,
-        ),
-        // Column(children: <Widget>[
-        //   _nativeAd(),
-        //   // _nativeBannerAd(),
-        //   _nativeAd(),
-        // ],),
-        Flexible(
-          child: Align(
-            alignment: Alignment(0, 1.0),
-            child: _currentAd,
-          ),
-          fit: FlexFit.tight,
-          flex: 3,
-        )
-      ],
-    );
-  }
-
-  Widget _getAllButtons() {
-    return GridView.count(
-      shrinkWrap: true,
-      crossAxisCount: 2,
-      childAspectRatio: 3,
-      children: <Widget>[
-        _getRaisedButton(title: "Banner Ad", onPressed: _showBannerAd),
-        _getRaisedButton(title: "Native Ad", onPressed: _showNativeAd),
-        _getRaisedButton(
-            title: "Native Banner Ad", onPressed: _showNativeBannerAd),
-        _getRaisedButton(
-            title: "Intestitial Ad", onPressed: _showInterstitialAd),
-        _getRaisedButton(title: "Rewarded Ad", onPressed: _showRewardedAd),
-      ],
-    );
-  }
-
-  Widget _getRaisedButton({required String title, void Function()? onPressed}) {
-    return Padding(
-      padding: EdgeInsets.all(8),
-      child: ElevatedButton(
-        onPressed: onPressed,
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
+            const SizedBox(height: 20),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('Banner Ad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Container(
+              alignment: Alignment.center,
+              child: BannerAd(
+                placementId: BannerAd.testPlacementId,
+                bannerSize: BannerSize.STANDARD,
+                listener: BannerAdListener(
+                  onLoaded: () => _updateStatus('Banner Loaded'),
+                  onError: (code, msg) => _updateStatus('Banner Error: $msg'),
+                  onClicked: () => _updateStatus('Banner Clicked'),
+                ),
+              ),
+            ),
+            // Container(
+            //   alignment: Alignment.center,
+            //   child: BannerAd(
+            //     placementId: BannerAd.testPlacementId,
+            //     bannerSize: BannerSize.LARGE,
+            //     listener: BannerAdListener(
+            //       onLoaded: () => _updateStatus('Banner Loaded'),
+            //       onError: (code, msg) => _updateStatus('Banner Error: $msg'),
+            //       onClicked: () => _updateStatus('Banner Clicked'),
+            //     ),
+            //   ),
+            // ),
+            // Container(
+            //   alignment: Alignment.center,
+            //   child: BannerAd(
+            //     placementId: BannerAd.testPlacementId,
+            //     bannerSize: BannerSize.MEDIUM_RECTANGLE,
+            //     listener: BannerAdListener(
+            //       onLoaded: () => _updateStatus('Banner Loaded'),
+            //       onError: (code, msg) => _updateStatus('Banner Error: $msg'),
+            //       onClicked: () => _updateStatus('Banner Clicked'),
+            //     ),
+            //   ),
+            // ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('Interstitial Ad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _loadInterstitial,
+                  child: const Text('Load Interstitial'),
+                ),
+                ElevatedButton(
+                  onPressed: _showInterstitial,
+                  child: const Text('Show Interstitial'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text('Rewarded Ad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _loadRewarded,
+                  child: const Text('Load Rewarded'),
+                ),
+                ElevatedButton(
+                  onPressed: _showRewarded,
+                  child: const Text('Show Rewarded'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-    );
-  }
-
-  _showInterstitialAd() {
-    final interstitialAd = _interstitialAd;
-
-    if (interstitialAd != null && _isInterstitialAdLoaded == true)
-      interstitialAd.show();
-    else
-      print("Interstial Ad not yet loaded!");
-  }
-
-  _showRewardedAd() {
-    final rewardedAd = _rewardedAd;
-
-    if (rewardedAd != null && _isRewardedAdLoaded) {
-      rewardedAd.show();
-    } else {
-      print("Rewarded Ad not yet loaded!");
-    }
-  }
-
-  _showBannerAd() {
-    setState(() {
-      _currentAd = BannerAd(
-        placementId: BannerAd.testPlacementId,
-        bannerSize: BannerSize.STANDARD,
-        listener: BannerAdListener(
-          onError: (code, message) =>
-              print('banner ad error\ncode: $code\nmessage:$message'),
-          onLoaded: () => print('banner ad loaded'),
-        ),
-      );
-    });
-  }
-
-  _showNativeBannerAd() {
-    setState(() {
-      _currentAd = _nativeBannerAd();
-    });
-  }
-
-  Widget _nativeBannerAd() {
-    return NativeAd(
-      placementId: NativeAd.testPlacementId,
-      adType: NativeAdType.NATIVE_BANNER_AD,
-      bannerAdSize: NativeBannerAdSize.HEIGHT_100,
-      width: double.infinity,
-      backgroundColor: Colors.blue,
-      titleColor: Colors.white,
-      descriptionColor: Colors.white,
-      buttonColor: Colors.deepPurple,
-      buttonTitleColor: Colors.white,
-      buttonBorderColor: Colors.white,
-      listener: NativeAdListener(
-        onError: (code, message) =>
-            print('native banner ad error\ncode: $code\nmessage:$message'),
-        onLoaded: () => print('native banner ad loaded'),
-        onMediaDownloaded: () => 'native banner ad media downloaded',
-      ),
-    );
-  }
-
-  _showNativeAd() {
-    setState(() {
-      _currentAd = _nativeAd();
-    });
-  }
-
-  Widget _nativeAd() {
-    return NativeAd(
-      placementId: NativeAd.testPlacementId,
-      adType: NativeAdType.NATIVE_AD_VERTICAL,
-      width: double.infinity,
-      height: 300,
-      backgroundColor: Colors.blue,
-      titleColor: Colors.white,
-      descriptionColor: Colors.white,
-      buttonColor: Colors.deepPurple,
-      buttonTitleColor: Colors.white,
-      buttonBorderColor: Colors.white,
-      listener: NativeAdListener(
-        onError: (code, message) =>
-            print('native ad error\ncode: $code\nmessage:$message'),
-        onLoaded: () => print('native ad loaded'),
-        onMediaDownloaded: () => 'native ad media downloaded',
-      ),
-      keepExpandedWhileLoading: true,
-      expandAnimationDuraion: 1000,
     );
   }
 }

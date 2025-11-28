@@ -18,8 +18,10 @@ class BannerSize {
 
   static const BannerSize STANDARD = BannerSize(width: 320, height: 50);
   static const BannerSize LARGE = BannerSize(width: 320, height: 90);
-  static const BannerSize MEDIUM_RECTANGLE =
-      BannerSize(width: 300, height: 250);
+  static const BannerSize MEDIUM_RECTANGLE = BannerSize(
+    width: 300,
+    height: 250,
+  );
 
   const BannerSize({this.width = 320, this.height = 50});
 }
@@ -40,7 +42,6 @@ class BannerAdListener {
 
 class BannerAd extends StatefulWidget {
   static const testPlacementId = 'YOUR_PLACEMENT_ID';
-  final Key? key;
 
   /// Replace the default one with your placement ID for the release build.
   final String placementId;
@@ -69,16 +70,16 @@ class BannerAd extends StatefulWidget {
   ///   'error\_message': "No internet connection",
   /// }
   /// ```
-  BannerAd({
-    this.key,
+  const BannerAd({
+    super.key,
     this.placementId = BannerAd.testPlacementId,
     this.bannerSize = BannerSize.STANDARD,
     this.listener,
     this.keepAlive = false,
-  }) : super(key: key);
+  });
 
   @override
-  _BannerAdState createState() => _BannerAdState();
+  State<BannerAd> createState() => _BannerAdState();
 }
 
 class _BannerAdState extends State<BannerAd>
@@ -122,13 +123,14 @@ class _BannerAdState extends State<BannerAd>
         ),
       );
     } else {
-      return Container(
+      return SizedBox(
         height: widget.bannerSize.height <= -1
             ? double.infinity
             : widget.bannerSize.height.toDouble(),
         child: Center(
-          child:
-              Text("Banner Ads for this platform is currently not supported"),
+          child: Text(
+            "Banner Ads for this platform is currently not supported",
+          ),
         ),
       );
     }

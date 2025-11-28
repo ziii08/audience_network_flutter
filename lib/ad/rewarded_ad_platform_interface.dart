@@ -26,7 +26,7 @@ class RewardedAdPlatformInterface {
   static final _listeners =
       <int, void Function(RewardedAdPlatformInterfaceResult, dynamic)>{};
 
-  static const _channel = const MethodChannel(REWARDED_VIDEO_CHANNEL);
+  static const _channel = MethodChannel(REWARDED_VIDEO_CHANNEL);
 
   /// Loads a rewarded video Ad in background. Replace the default [placementId]
   /// with the one which you obtain by signing-up for Facebook Audience Network.
