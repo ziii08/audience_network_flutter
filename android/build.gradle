@@ -22,8 +22,13 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 35
     namespace 'com.dsi.easy_audience_network'
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
     
     defaultConfig {
         minSdkVersion 21
@@ -39,5 +44,8 @@ dependencies {
 
     implementation 'com.facebook.android:audience-network-sdk:6.17.0'
     implementation 'androidx.annotation:annotation:1.4.0'
+    
+    // Compile-only untuk menghilangkan warning Mode.LOCAL tanpa menambah ukuran APK
+    compileOnly 'com.facebook.infer.annotation:infer-annotation:0.18.0'
     compileOnly files('tempLibs/flutter.jar')
 }
